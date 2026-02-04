@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sınav Canavarı: Kömür Grisi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Lexend:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #121212; /* Grimsi koyu renk */
+            color: #e5e5e5;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+        }
+        .lexend { font-family: 'Lexend', sans-serif; }
+        .charcoal-card {
+            background-color: #1a1a1a;
+            border: 1px solid #2a2a2a;
+        }
+        .active-tab {
+            color: #a78bfa;
+            border-bottom: 2px solid #a78bfa;
+        }
+        .special-char-btn {
+            background: #252525;
+            border: 1px solid #333;
+            color: #d1d1d1;
+            transition: all 0.2s;
+        }
+        .special-char-btn:active {
+            transform: scale(0.9);
+            background: #a78bfa;
+            color: white;
+        }
+        .input-grey {
+            background: #222;
+            border-bottom: 2px solid #333;
+            color: #a78bfa;
+            outline: none;
+            transition: all 0.3s;
+        }
+        .input-grey:focus {
+            border-color: #a78bfa;
+            background: #282828;
+        }
+        .loader {
+            border: 2px solid #333;
+            border-top: 2px solid #a78bfa;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+
+        /* Yazma alanı için özel stil */
+        textarea {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid #2a2a2a;
+            border-radius: 12px;
+            padding: 12px;
+            color: #ccc;
+            width: 100%;
+            resize: none;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #a78bfa;
+            background: rgba(255, 255, 255, 0.05);
+        }
+    </style>
+</head>
+<body class="p-4">
+
+    <div id="app" class="w-full max-w-lg charcoal-card rounded-3xl overflow-hidden flex flex-col h-[90vh] shadow-2xl">
+        
+        <!-- Header -->
+        <div class="p-6 border-b border-neutral-800 flex justify-between items-center bg-[#181818]">
+            <div>
+                <h1 class="lexend text-xl text-white tracking-tight">Sınav Canavarı <span class="text-violet-400">Grisi</span></h1>
+                <p class="text-[10px] text-neutral-500 uppercase tracking-widest font-bold">Lexique 7 • Açık Uçlu</p>
+            </div>
+            <div id="global-score" class="text-xs font-bold text-violet-300 border border-violet-400/20 px-3 py-1 rounded-full bg-violet-400/10">Puan: 0</div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="flex bg-[#181818] border-b border-neutral-800 text-[10px] uppercase tracking-widest font-bold text-neutral-500">
+            <button onclick="switchTab('learn')" id="tab-learn" class="flex-1 py-4 active-tab">Öğren</button>
+            <button onclick="switchTab('fr-tr')" id="tab-fr-tr" class="flex-1 py-4">FR→TR</button>
+            <button onclick="switchTab('tr-fr')" id="tab-tr-fr" class="flex-1 py-4">TR→FR</button>
+            <button onclick="switchTab('write')" id="tab-write" class="flex-1 py-4">Yazım</button>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="flex-grow p-6 overflow-y-auto bg-[#121212] flex flex-col">
+            
+            <!-- LEARN VIEW -->
+            <div id="view-learn" class="view space-y-6">
+                <div class="text-center py-10 rounded-3xl border border-neutral-800 bg-[#1a1a1a]">
+                    <span id="learn-progress" class="text-[9px] text-neutral-600 font-bold mb-3 block tracking-widest uppercase">Kelimeler 1 / 10</span>
+                    <h2 id="learn-word-fr" class="lexend text-3xl text-white mb-2">...</h2>
+                    <p id="learn-word-tr" class="text-neutral-400 text-lg">...</p>
+                    <button onclick="speakWord('learn')" class="mt-4 text-2xl hover:opacity-70 transition-opacity">🔊</button>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="p-5 rounded-2xl border border-violet-500/10 bg-violet-500/5">
+                        <label class="text-[9px] font-bold text-violet-400/80 block mb-2 uppercase tracking-widest">AI Hafıza Kartı</label>
+                        <p id="ai-tactic-text" class="text-sm text-neutral-400 italic leading-relaxed">Yükleniyor...</p>
+                    </div>
+
+                    <div class="p-5 rounded-2xl border border-neutral-800 bg-neutral-900/10">
+                        <label class="text-[9px] font-bold text-neutral-500 block mb-2 uppercase tracking-widest">Senin Özel Notun</label>
+                        <textarea id="user-tactic-input" class="text-sm" rows="3" placeholder="Buraya kendi ezber yöntemini yazabilirsin..."></textarea>
+                        <button onclick="saveUserTactic()" id="save-btn" class="mt-3 w-full py-2 bg-neutral-800 hover:bg-neutral-700 text-[10px] font-bold text-violet-400 rounded-lg uppercase transition-all">Buluta İşle & Kaydet</button>
+                    </div>
+                </div>
+
+                <div class="flex gap-4 pt-4 mt-auto">
+                    <button onclick="prevWord()" class="flex-1 py-3 border border-neutral-800 rounded-2xl text-[11px] font-bold text-neutral-400 hover:bg-neutral-800">GERİ</button>
+                    <button onclick="nextWord()" class="flex-1 py-3 bg-violet-600 hover:bg-violet-500 rounded-2xl text-[11px] font-bold text-white shadow-lg">İLERİ</button>
+                </div>
+            </div>
+
+            <!-- OPEN ENDED MODE -->
+            <div id="view-open" class="view hidden flex-grow flex flex-col space-y-8">
+                <div class="text-center pt-6">
+                    <p id="open-mode-title" class="text-[9px] text-neutral-500 uppercase font-bold mb-2 tracking-widest">Çevir Bakalım</p>
+                    <h2 id="open-question" class="lexend text-3xl text-white">...</h2>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="relative">
+                        <input type="text" id="open-input" autocomplete="off" class="w-full input-grey py-4 rounded-xl text-center text-2xl font-medium" placeholder="Cevabı yaz...">
+                        <div id="open-feedback" class="mt-4 text-center text-[11px] font-bold h-4"></div>
+                    </div>
+
+                    <!-- Character Keyboard -->
+                    <div id="char-keyboard" class="grid grid-cols-6 gap-2 pt-2">
+                        <button onclick="insertChar('é')" class="special-char-btn py-3 rounded-xl text-sm font-bold">é</button>
+                        <button onclick="insertChar('è')" class="special-char-btn py-3 rounded-xl text-sm font-bold">è</button>
+                        <button onclick="insertChar('ê')" class="special-char-btn py-3 rounded-xl text-sm font-bold">ê</button>
+                        <button onclick="insertChar('ç')" class="special-char-btn py-3 rounded-xl text-sm font-bold">ç</button>
+                        <button onclick="insertChar('à')" class="special-char-btn py-3 rounded-xl text-sm font-bold">à</button>
+                        <button onclick="insertChar('î')" class="special-char-btn py-3 rounded-xl text-sm font-bold">î</button>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 mt-auto pb-4">
+                    <button onclick="checkOpenAnswer()" class="flex-grow py-4 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-2xl text-xs uppercase tracking-widest shadow-lg">KONTROL ET</button>
+                    <button onclick="getOpenHint()" class="w-16 border border-neutral-800 rounded-2xl flex items-center justify-center hover:bg-neutral-800">
+                        <span class="text-xl">💡</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="p-4 border-t border-neutral-800 bg-[#181818]">
+            <button onclick="showFinalSummary()" class="w-full text-[9px] font-bold text-neutral-600 hover:text-neutral-400 uppercase tracking-widest py-2">Sınav Öncesi Not Özetim</button>
+        </div>
+    </div>
+
+    <!-- AI Modal -->
+    <div id="modal" class="hidden fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-6 backdrop-blur-sm">
+        <div class="bg-[#1a1a1a] w-full max-w-md rounded-3xl p-8 border border-neutral-800 relative">
+            <button onclick="closeModal()" class="absolute top-4 right-4 text-neutral-600 text-2xl">×</button>
+            <div id="modal-content" class="text-neutral-300 text-sm leading-relaxed"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const words = [
+            { fr: "Faire les courses", tr: "Mutfak alışverişi yapmak" },
+            { fr: "Nettoyer", tr: "Temizlemek" },
+            { fr: "Faire la vaisselle", tr: "Bulaşık yıkamak" },
+            { fr: "Faire la lessive", tr: "Çamaşır yıkamak" },
+            { fr: "Passer l'aspirateur", tr: "Elektrik süpürgesiyle süpürmek" },
+            { fr: "Sortir la poubelle", tr: "Çöpü çıkarmak" },
+            { fr: "Prendre la poussière", tr: "Toz almak" },
+            { fr: "Ranger la chambre", tr: "Odayı toplamak" },
+            { fr: "Faire la cuisine", tr: "Yemek pişirmek" },
+            { fr: "Faire le ménage", tr: "Temizlik yapmak" }
+        ];
+
+        let state = {
+            currentIndex: 0,
+            userNotes: {},
+            aiTactics: {},
+            currentMode: 'learn',
+            score: 0,
+            user: null,
+            targetWord: null,
+            appId: typeof __app_id !== 'undefined' ? __app_id : 'fr-charcoal-v1'
+        };
+
+        const apiKey = ""; 
+
+        // Firebase Setup
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const fbApp = initializeApp(firebaseConfig);
+        const auth = getAuth(fbApp);
+        const db = getFirestore(fbApp);
+
+        async function startAuth() {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+        }
+
+        onAuthStateChanged(auth, async (user) => {
+            state.user = user;
+            if (user) {
+                const docRef = doc(db, 'artifacts', state.appId, 'users', user.uid, 'data', 'notes');
+                // İlk yüklemede veriyi alalım
+                const s = await getDoc(docRef);
+                if (s.exists()) {
+                    state.userNotes = s.data().tactics || {};
+                    if (state.currentMode === 'learn') {
+                        document.getElementById('user-tactic-input').value = state.userNotes[words[state.currentIndex].fr] || "";
+                    }
+                }
+            }
+        });
+
+        startAuth();
+
+        // UI Routing
+        window.switchTab = (mode) => {
+            state.currentMode = mode;
+            document.querySelectorAll('button[id^="tab-"]').forEach(b => b.classList.remove('active-tab'));
+            document.getElementById(`tab-${mode}`).classList.add('active-tab');
+            
+            if (mode === 'learn') {
+                document.getElementById('view-learn').classList.remove('hidden');
+                document.getElementById('view-open').classList.add('hidden');
+                updateLearnCard();
+            } else {
+                document.getElementById('view-learn').classList.add('hidden');
+                document.getElementById('view-open').classList.remove('hidden');
+                setupOpenQuestion(mode);
+            }
+        };
+
+        // LEARN MODE
+        window.updateLearnCard = () => {
+            const word = words[state.currentIndex];
+            document.getElementById('learn-word-fr').innerText = word.fr;
+            document.getElementById('learn-word-tr').innerText = word.tr;
+            document.getElementById('learn-progress').innerText = `KELİMELER ${state.currentIndex + 1} / ${words.length}`;
+            
+            // Notları yükle
+            const noteInput = document.getElementById('user-tactic-input');
+            noteInput.value = state.userNotes[word.fr] || "";
+            
+            if (state.aiTactics[word.fr]) {
+                document.getElementById('ai-tactic-text').innerText = state.aiTactics[word.fr];
+            } else {
+                getAITactic();
+            }
+        };
+
+        window.nextWord = () => { state.currentIndex = (state.currentIndex + 1) % words.length; updateLearnCard(); };
+        window.prevWord = () => { state.currentIndex = (state.currentIndex - 1 + words.length) % words.length; updateLearnCard(); };
+
+        window.saveUserTactic = async () => {
+            if (!state.user) return;
+            const btn = document.getElementById('save-btn');
+            btn.innerText = "KAYDEDİLİYOR...";
+            
+            const word = words[state.currentIndex].fr;
+            const note = document.getElementById('user-tactic-input').value;
+            state.userNotes[word] = note;
+            
+            try {
+                await setDoc(doc(db, 'artifacts', state.appId, 'users', state.user.uid, 'data', 'notes'), { tactics: state.userNotes }, { merge: true });
+                showToast("Notun Saklandı!");
+            } catch (e) {
+                showToast("Hata oluştu!");
+            } finally {
+                btn.innerText = "BULUTA İŞLE & KAYDET";
+            }
+        };
+
+        // OPEN ENDED QUIZ
+        window.setupOpenQuestion = (mode) => {
+            state.targetWord = words[Math.floor(Math.random() * words.length)];
+            const titleEl = document.getElementById('open-mode-title');
+            const questionEl = document.getElementById('open-question');
+            const inputEl = document.getElementById('open-input');
+            const keyboard = document.getElementById('char-keyboard');
+
+            inputEl.value = "";
+            document.getElementById('open-feedback').innerText = "";
+
+            if (mode === 'fr-tr') {
+                titleEl.innerText = "Türkçesi Nedir?";
+                questionEl.innerText = state.targetWord.fr;
+                keyboard.classList.add('hidden');
+            } else {
+                titleEl.innerText = mode === 'tr-fr' ? "Fransızcası Nedir?" : "Kelimeyi Yaz";
+                questionEl.innerText = state.targetWord.tr;
+                keyboard.classList.remove('hidden');
+            }
+            inputEl.focus();
+        };
+
+        window.insertChar = (char) => {
+            const input = document.getElementById('open-input');
+            input.value += char;
+            input.focus();
+        };
+
+        window.checkOpenAnswer = () => {
+            const val = document.getElementById('open-input').value.trim().toLowerCase();
+            const mode = state.currentMode;
+            let target = mode === 'fr-tr' ? state.targetWord.tr.toLowerCase() : state.targetWord.fr.toLowerCase();
+
+            const feedback = document.getElementById('open-feedback');
+            if (val === target) {
+                feedback.innerText = "DOĞRU! +30 PUAN 🎉";
+                feedback.className = "mt-4 text-center text-[10px] font-bold text-violet-400 uppercase tracking-widest";
+                state.score += 30;
+                document.getElementById('global-score').innerText = `Puan: ${state.score}`;
+                createConfetti();
+                setTimeout(() => setupOpenQuestion(mode), 1200);
+            } else {
+                feedback.innerText = "BİR DAHA DENE! ❌";
+                feedback.className = "mt-4 text-center text-[10px] font-bold text-red-500 uppercase tracking-widest";
+            }
+        };
+
+        // AI LOGIC
+        async function callGemini(prompt) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            });
+            const data = await res.json();
+            return data.candidates?.[0]?.content?.parts?.[0]?.text;
+        }
+
+        window.getAITactic = async () => {
+            const word = words[state.currentIndex];
+            const display = document.getElementById('ai-tactic-text');
+            display.innerHTML = '<div class="loader mx-auto"></div>';
+            try {
+                const t = await callGemini(`"${word.fr}" (${word.tr}) için Türkçe çok kısa, eğlenceli 1 cümlelik ezber taktiği ver.`);
+                state.aiTactics[word.fr] = t;
+                display.innerText = t;
+            } catch (e) { display.innerText = "İpucu şu an gelmiyor."; }
+        };
+
+        window.getOpenHint = async () => {
+            const target = state.currentMode === 'fr-tr' ? state.targetWord.tr : state.targetWord.fr;
+            showModal('<div class="flex justify-center"><div class="loader"></div></div>');
+            try {
+                const h = await callGemini(`"${target}" kelimesi için cevabı söylemeden küçük bir ipucu ver.`);
+                showModal(h);
+            } catch (e) { showModal("AI meşgul."); }
+        };
+
+        window.showFinalSummary = () => {
+            let html = '<h3 class="lexend text-xl text-violet-400 mb-6 uppercase text-center">Sınav Öncesi Notlarım</h3>';
+            words.forEach(w => {
+                html += `
+                <div class="mb-4 p-5 bg-neutral-900 rounded-2xl border border-neutral-800">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="lexend text-white text-lg">${w.fr}</span>
+                        <span class="text-neutral-500 text-[10px] uppercase">${w.tr}</span>
+                    </div>
+                    <p class="text-[11px] text-violet-400/60 mb-1"><b>Taktik:</b> ${state.aiTactics[w.fr] || '-'}</p>
+                    <p class="text-[11px] text-neutral-400"><b>Benim Notum:</b> ${state.userNotes[w.fr] || 'Eklenmemiş'}</p>
+                </div>`;
+            });
+            showModal(html);
+        };
+
+        // TTS
+        window.speakWord = async (mode) => {
+            let text = words[state.currentIndex].fr;
+            if(mode === 'open') text = state.targetWord.fr;
+
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: text }] }],
+                        generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } } } }
+                    })
+                });
+                const data = await res.json();
+                const b64 = data.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                if (b64) {
+                    const pcm = Uint8Array.from(atob(b64), c => c.charCodeAt(0)).buffer;
+                    const h = new ArrayBuffer(44); const v = new DataView(h);
+                    v.setUint32(0, 0x52494646, false); v.setUint32(4, 36 + pcm.byteLength, true);
+                    v.setUint32(8, 0x57415645, false); v.setUint32(12, 0x666d7420, false);
+                    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+                    v.setUint32(24, 24000, true); v.setUint32(28, 48000, true);
+                    v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+                    v.setUint32(36, 0x64617461, false); v.setUint32(40, pcm.byteLength, true);
+                    new Audio(URL.createObjectURL(new Blob([h, pcm], { type: 'audio/wav' }))).play();
+                }
+            } catch (e) { console.error(e); }
+        };
+
+        // Helpers
+        function showToast(m) { const t = document.createElement('div'); t.className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-violet-600 text-white px-5 py-2 rounded-full text-[10px] font-bold uppercase z-[100] shadow-2xl"; t.innerText=m; document.body.appendChild(t); setTimeout(()=>t.remove(), 2000); }
+        window.showModal = (c) => { document.getElementById('modal-content').innerHTML = c; document.getElementById('modal').classList.remove('hidden'); };
+        window.closeModal = () => document.getElementById('modal').classList.add('hidden');
+        
+        function createConfetti() {
+            for (let i = 0; i < 15; i++) {
+                const c = document.createElement('div');
+                c.className = "fixed w-1 h-3 bg-violet-400 z-[1000]";
+                c.style.left = Math.random() * 100 + 'vw';
+                c.style.top = '-10px';
+                document.body.appendChild(c);
+                c.animate([{ transform: 'translateY(0)', opacity: 1 }, { transform: `translate(${(Math.random()-0.5)*100}px, 100vh)`, opacity: 0 }], { duration: 1000 }).onfinish = () => c.remove();
+            }
+        }
+
+        window.onload = () => switchTab('learn');
+        document.getElementById('open-input').addEventListener('keypress', (e) => { if (e.key === 'Enter') checkOpenAnswer(); });
+    </script>
+</body>
+</html>
